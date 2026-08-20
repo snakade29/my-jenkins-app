@@ -4,6 +4,12 @@ pipeline {
         label 'node2'
     }
 
+    environment {
+        // Replace with your actual Docker Hub username
+        DOCKER_IMAGE = 'shubhamnakade/my-jenkins-app'
+        CREDENTIALS_ID = 'Docker'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -13,42 +19,30 @@ pipeline {
             }
         }
 
-        stage('Verify Source Code') {
-            steps {
-                sh '''
-                    echo "========================================="
-                    echo "📂 Source Code"
-                    echo "========================================="
-
-                    echo "Current directory:"
-                    pwd
-
-                    echo ""
-                    echo "Files in workspace:"
-                    ls -la
-
-                    echo ""
-                    echo "Git commit:"
-                    git log -1 --oneline
-                '''
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 sh '''
                     echo "========================================="
                     echo "🐳 Building Docker Image"
                     echo "========================================="
-
-                    docker build \
-                        -t my-jenkins-app:latest \
-                        .
-
-                    echo ""
-                    echo "Docker image created:"
-                    docker images my-jenkins-app:latest
+                    docker build -t ${DOCKER_IMAGE}:latest .
                 '''
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: "${CREDENTIALS_ID}", 
+                                                  usernameVariable: 'DOCKER_USER', 
+                                                  passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "========================================="
+                        echo "🚀 Pushing to Docker Hub"
+                        echo "========================================="
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}:latest
+                    '''
+                }
             }
         }
 
@@ -58,18 +52,10 @@ pipeline {
                     echo "========================================="
                     echo "🚀 Deploying Application"
                     echo "========================================="
-
+                    docker pull ${DOCKER_IMAGE}:latest
                     docker stop project5-app || true
                     docker rm project5-app || true
-
-                    docker run -d \
-                        -p 8081:80 \
-                        --name project5-app \
-                        my-jenkins-app:latest
-
-                    echo ""
-                    echo "Running container:"
-                    docker ps
+                    docker run -d -p 8081:80 --name project5-app ${DOCKER_IMAGE}:latest
                 '''
             }
         }
@@ -80,38 +66,19 @@ pipeline {
                     echo "========================================="
                     echo "🌐 Testing Application"
                     echo "========================================="
-
                     sleep 3
-
-                    curl http://localhost:8081
-
-                    echo ""
-                    echo "========================================="
-                    echo "✅ Application is working!"
-                    echo "========================================="
+                    curl -f http://localhost:8081 || curl -f http://43.204.235.143:8081
                 '''
             }
         }
     }
 
     post {
-
         success {
-            echo '🎉 Project 5 CI/CD Pipeline completed successfully!'
+            echo '🎉 Pipeline completed successfully!'
         }
-
         failure {
-            echo '❌ Project 5 Pipeline failed. Check the console output.'
-        }
-
-        always {
-            sh '''
-                echo "========================================="
-                echo "🐳 Running Containers"
-                echo "========================================="
-
-                docker ps || true
-            '''
+            echo '❌ Pipeline failed.'
         }
     }
 }
