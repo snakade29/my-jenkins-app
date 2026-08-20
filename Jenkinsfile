@@ -9,7 +9,6 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '📦 Jenkins is checking out source code from GitHub...'
-
                 checkout scm
             }
         }
@@ -48,7 +47,7 @@ pipeline {
 
                     echo ""
                     echo "Docker image created:"
-                    docker images my-jenkins-app
+                    docker images my-jenkins-app:latest
                 '''
             }
         }
@@ -60,12 +59,12 @@ pipeline {
                     echo "🚀 Deploying Application"
                     echo "========================================="
 
-                    docker stop project3-app || true
-                    docker rm project3-app || true
+                    docker stop project5-app || true
+                    docker rm project5-app || true
 
                     docker run -d \
-                        -p 8080:80 \
-                        --name project3-app \
+                        -p 8081:80 \
+                        --name project5-app \
                         my-jenkins-app:latest
 
                     echo ""
@@ -84,7 +83,7 @@ pipeline {
 
                     sleep 3
 
-                    curl http://localhost:8080
+                    curl http://localhost:8081
 
                     echo ""
                     echo "========================================="
@@ -98,11 +97,11 @@ pipeline {
     post {
 
         success {
-            echo '🎉 Project 3 CI/CD Pipeline completed successfully!'
+            echo '🎉 Project 5 CI/CD Pipeline completed successfully!'
         }
 
         failure {
-            echo '❌ Project 3 Pipeline failed. Check the console output.'
+            echo '❌ Project 5 Pipeline failed. Check the console output.'
         }
 
         always {
